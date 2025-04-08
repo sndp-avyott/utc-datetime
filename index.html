@@ -3,50 +3,68 @@
 <head>
   <meta charset="UTF-8" />
   <title>UTC Datetime Picker</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      padding: 2rem;
-    }
-    label, input, button {
-      font-size: 1rem;
-      margin-bottom: 1rem;
-    }
-    #result {
-      margin-top: 1rem;
-      font-weight: bold;
-    }
-  </style>
 </head>
 <body>
-  <h2>Select a datetime (local)</h2>
-  <form id="datetime-form">
-    <label for="datetime">Date & Time:</label><br />
-    <input type="datetime-local" id="datetime" name="datetime" required />
-    <br />
-    <button type="submit">Convert to UTC</button>
-  </form>
+  <h2>Select a Datetime</h2>
 
-  <div id="result"></div>
+  <label for="datetime">Datetime:</label>
+  <input type="datetime-local" id="datetime" />
 
+  <label for="timezone">Timezone:</label>
+  <select id="timezone">
+    <option value="UTC">UTC</option>
+    <option value="Asia/Kolkata">Asia/Kolkata</option>
+    <option value="America/New_York">America/New_York</option>
+    <option value="Europe/London">Europe/London</option>
+    <option value="Asia/Tokyo">Asia/Tokyo</option>
+    <!-- add more as needed -->
+  </select>
+
+  <button onclick="setToNow()">Set to Now</button>
+
+  <h3>UTC Time Output:</h3>
+  <pre id="utc-output"></pre>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/luxon/3.4.3/luxon.min.js"></script>
   <script>
-    const form = document.getElementById('datetime-form');
-    const resultDiv = document.getElementById('result');
+    const DateTime = luxon.DateTime;
+    const datetimeInput = document.getElementById('datetime');
+    const timezoneSelect = document.getElementById('timezone');
+    const utcOutput = document.getElementById('utc-output');
 
-    form.addEventListener('submit', function (e) {
-      e.preventDefault();
-      const localDatetime = document.getElementById('datetime').value;
+    function setToNow() {
+      const now = DateTime.utc().toISO({ suppressMilliseconds: true });
+      const localDateTime = DateTime.fromISO(now, { zone: 'UTC' }).setZone(timezoneSelect.value);
+      datetimeInput.value = localDateTime.toFormat("yyyy-MM-dd'T'HH:mm");
+      updateUTCOutput();
+    }
 
-      if (!localDatetime) {
-        resultDiv.textContent = "Please select a datetime.";
+    function updateUTCOutput() {
+      const inputVal = datetimeInput.value;
+      const selectedZone = timezoneSelect.value;
+
+      if (!inputVal) {
+        utcOutput.textContent = 'No datetime selected';
         return;
       }
 
-      // Convert to UTC
-      const localDate = new Date(localDatetime);
-      const utcString = localDate.toISOString();
+      const dt = DateTime.fromFormat(inputVal, "yyyy-MM-dd'T'HH:mm", { zone: selectedZone });
+      utcOutput.textContent = dt.toUTC().toISO({ suppressMilliseconds: true });
+    }
 
-      resultDiv.textContent = `UTC Time: ${utcString}`;
+    // Set initial datetime to now in UTC zone (but formatted in selected tz)
+    window.onload = () => {
+      setToNow();
+    };
+
+    // Update output on changes
+    datetimeInput.addEventListener('change', updateUTCOutput);
+    timezoneSelect.addEventListener('change', () => {
+      // Translate current time in field to new tz (preserving absolute moment)
+      const oldTz = DateTime.fromFormat(datetimeInput.value, "yyyy-MM-dd'T'HH:mm", { zone: timezoneSelect.value });
+      const newTzTime = oldTz.setZone(timezoneSelect.value);
+      datetimeInput.value = newTzTime.toFormat("yyyy-MM-dd'T'HH:mm");
+      updateUTCOutput();
     });
   </script>
 </body>
